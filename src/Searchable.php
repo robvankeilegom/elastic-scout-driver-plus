@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Elastic\ScoutDriverPlus;
 
 use Closure;
+use Illuminate\Database\Eloquent\Builder;
 use Elastic\ScoutDriverPlus\Builders\QueryBuilderInterface;
 use Elastic\ScoutDriverPlus\Builders\SearchParametersBuilder;
 use Laravel\Scout\Searchable as BaseSearchable;
@@ -76,5 +77,12 @@ trait Searchable
         $engine = $self->searchableUsing();
 
         $engine->closePointInTime($pointInTimeId);
+    }
+
+    public function queryElasticModelsByIds(Builder $query, array $ids)
+    {
+        $query->whereIn($this->getScoutKeyName(), $ids);
+
+        return $query;
     }
 }

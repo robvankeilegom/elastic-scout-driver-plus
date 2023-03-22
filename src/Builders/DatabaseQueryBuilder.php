@@ -40,7 +40,7 @@ final class DatabaseQueryBuilder
             $query->with($this->relations);
         }
 
-        $query->whereIn($this->model->getScoutKeyName(), $ids);
+        $query = $this->model->queryElasticModelsByIds($query, $ids);
 
         if (isset($this->callback)) {
             call_user_func($this->callback, $query);

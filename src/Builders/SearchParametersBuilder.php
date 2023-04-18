@@ -59,6 +59,8 @@ class SearchParametersBuilder
     private ?array $searchAfter;
     private ?array $routing;
     private ?bool $explain;
+    private ?int $terminateAfter;
+    private ?bool $requestCache;
 
     public function __construct(Model $model)
     {
@@ -305,6 +307,18 @@ class SearchParametersBuilder
         return $this;
     }
 
+    public function terminateAfter(int $terminateAfter): self
+    {
+        $this->terminateAfter = $terminateAfter;
+        return $this;
+    }
+
+    public function requestCache(bool $requestCache): self
+    {
+        $this->requestCache = $requestCache;
+        return $this;
+    }
+
     public function buildSearchParameters(): SearchParameters
     {
         $searchParameters = new SearchParameters();
@@ -393,6 +407,14 @@ class SearchParametersBuilder
 
         if (isset($this->explain)) {
             $searchParameters->explain($this->explain);
+        }
+
+        if (isset($this->terminateAfter)) {
+            $searchParameters->terminateAfter($this->terminateAfter);
+        }
+
+        if (isset($this->requestCache)) {
+            $searchParameters->requestCache($this->requestCache);
         }
 
         return $searchParameters;

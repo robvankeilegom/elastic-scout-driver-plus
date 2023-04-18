@@ -7,12 +7,15 @@ use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Elastic\ScoutDriverPlus\Builders\QueryBuilderInterface;
 use Elastic\ScoutDriverPlus\Builders\SearchParametersBuilder;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Support\Collection as BaseCollection;
 use Laravel\Scout\Searchable as BaseSearchable;
 
 trait Searchable
 {
     use BaseSearchable {
         searchableUsing as baseSearchableUsing;
+        registerSearchableMacros as baseRegisterSearchableMacros;
     }
 
     /**
@@ -79,10 +82,29 @@ trait Searchable
         $engine->closePointInTime($pointInTimeId);
     }
 
+    /**
+     * @return void
+     */
+    public function registerSearchableMacros()
+    {
+        $this->baseRegisterSearchableMacros();
+
+        BaseCollection::macro('withSearchableRelations', function () {
+            $models = new EloquentCollection($this);
+
+            if ($searchableWith = $models->first()->searchableWith()) {
+                $models->loadMissing($searchableWith);
+            }
+
+            return $models;
+        });
+    }
+
     public function queryElasticModelsByIds(Builder $query, array $ids)
     {
         $query->whereIn($this->getScoutKeyName(), $ids);
 
         return $query;
     }
+
 }

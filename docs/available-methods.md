@@ -12,6 +12,7 @@
 * [postFilter](#postfilter)
 * [preference](#preference)
 * [refineModels](#refinemodels)
+* [requestCache](#requestcache)
 * [rescore](#rescore)
 * [routing](#routing)
 * [searchAfter](#searchafter)
@@ -20,6 +21,7 @@
 * [sort](#sort)
 * [source](#source)
 * [suggest](#suggest)
+* [terminateAfter](#terminateafter)
 * [trackScores](#trackscores)
 * [trackTotalHits](#tracktotalhits)
 * [unless](#unless)
@@ -299,6 +301,16 @@ $models = Book::searchQuery($query)
     ->models();
 ```
 
+### requestCache
+
+This method allows you to [enable or disable cache per request](https://www.elastic.co/guide/en/elasticsearch/reference/current/shard-request-cache.html#_enabling_and_disabling_caching_per_request):
+
+```php
+$searchResult = Book::searchQuery($query)
+    ->requestCache(true)
+    ->execute();
+```
+
 ### rescore
 
 This method allows you to [rescore](https://www.elastic.co/guide/en/elasticsearch/reference/current/filter-search-results.html#rescore)
@@ -471,6 +483,16 @@ $options = $firstSuggestion->options();
 $models = $firstSuggestion->models();
 // an array representation of the suggestion
 $raw = $firstSuggestion->raw();
+```
+
+### terminateAfter
+
+This method allows you to set the maximum number of documents to collect for each shard:
+
+```php
+$searchResult = Book::searchQuery($query)
+    ->terminateAfter(10)
+    ->execute();
 ```
 
 ### trackScores

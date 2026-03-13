@@ -5,36 +5,50 @@ namespace Elastic\ScoutDriverPlus\Tests\Integration\Queries;
 use Carbon\Carbon;
 use Elastic\Adapter\Documents\Document;
 use Elastic\Adapter\Search\Highlight;
+use Elastic\ScoutDriverPlus\Builders\DatabaseQueryBuilder;
+use Elastic\ScoutDriverPlus\Builders\SearchParametersBuilder;
 use Elastic\ScoutDriverPlus\Decorators\Hit;
+use Elastic\ScoutDriverPlus\Decorators\SearchResult;
+use Elastic\ScoutDriverPlus\Decorators\Suggestion;
+use Elastic\ScoutDriverPlus\Engine;
+use Elastic\ScoutDriverPlus\Exceptions\NotSearchableModelException;
+use Elastic\ScoutDriverPlus\Factories\DocumentFactory;
+use Elastic\ScoutDriverPlus\Factories\LazyModelFactory;
+use Elastic\ScoutDriverPlus\Factories\ModelFactory;
+use Elastic\ScoutDriverPlus\Factories\ParameterFactory;
+use Elastic\ScoutDriverPlus\Factories\RoutingFactory;
+use Elastic\ScoutDriverPlus\Paginator;
+use Elastic\ScoutDriverPlus\QueryParameters\ParameterCollection;
+use Elastic\ScoutDriverPlus\Searchable;
+use Elastic\ScoutDriverPlus\Support\Query;
 use Elastic\ScoutDriverPlus\Tests\App\Author;
 use Elastic\ScoutDriverPlus\Tests\App\Book;
 use Elastic\ScoutDriverPlus\Tests\App\Model;
 use Elastic\ScoutDriverPlus\Tests\Integration\TestCase;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Support\Facades\Cache;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\UsesClass;
 use RuntimeException;
 use const SORT_NUMERIC;
 use stdClass;
 
-/**
- * @covers \Elastic\ScoutDriverPlus\Builders\SearchParametersBuilder
- * @covers \Elastic\ScoutDriverPlus\Engine
- * @covers \Elastic\ScoutDriverPlus\Factories\LazyModelFactory
- * @covers \Elastic\ScoutDriverPlus\Factories\ModelFactory
- * @covers \Elastic\ScoutDriverPlus\Support\Query
- *
- * @uses   \Elastic\ScoutDriverPlus\Builders\DatabaseQueryBuilder
- * @uses   \Elastic\ScoutDriverPlus\Decorators\Hit
- * @uses   \Elastic\ScoutDriverPlus\Decorators\SearchResult
- * @uses   \Elastic\ScoutDriverPlus\Decorators\Suggestion
- * @uses   \Elastic\ScoutDriverPlus\Exceptions\NotSearchableModelException
- * @uses   \Elastic\ScoutDriverPlus\Factories\DocumentFactory
- * @uses   \Elastic\ScoutDriverPlus\Factories\ParameterFactory
- * @uses   \Elastic\ScoutDriverPlus\Factories\RoutingFactory
- * @uses   \Elastic\ScoutDriverPlus\Paginator
- * @uses   \Elastic\ScoutDriverPlus\QueryParameters\ParameterCollection
- * @uses   \Elastic\ScoutDriverPlus\Searchable
- */
+#[CoversClass(SearchParametersBuilder::class)]
+#[CoversClass(Engine::class)]
+#[CoversClass(LazyModelFactory::class)]
+#[CoversClass(ModelFactory::class)]
+#[CoversClass(Query::class)]
+#[UsesClass(DatabaseQueryBuilder::class)]
+#[UsesClass(Hit::class)]
+#[UsesClass(SearchResult::class)]
+#[UsesClass(Suggestion::class)]
+#[UsesClass(NotSearchableModelException::class)]
+#[UsesClass(DocumentFactory::class)]
+#[UsesClass(ParameterFactory::class)]
+#[UsesClass(RoutingFactory::class)]
+#[UsesClass(Paginator::class)]
+#[UsesClass(ParameterCollection::class)]
+#[UsesClass(Searchable::class)]
 final class RawQueryTest extends TestCase
 {
     public function test_models_can_be_found_using_raw_query(): void
@@ -458,11 +472,12 @@ final class RawQueryTest extends TestCase
         $cacheStore = Cache::store('file');
         $cacheStore->clear();
 
-        $found = $cacheStore->rememberForever('raw_search_result', static function () {
-            return Book::searchQuery(['match_all' => new stdClass()])
+        $found = $cacheStore->rememberForever(
+            'raw_search_result',
+            static fn () => Book::searchQuery(['match_all' => new stdClass()])
                 ->sort('id')
-                ->execute();
-        });
+                ->execute()
+        );
 
         $this->assertFoundModels($target, $found);
     }
@@ -638,5 +653,51 @@ final class RawQueryTest extends TestCase
         $found = Book::searchQuery()->terminateAfter(1)->execute();
 
         $this->assertCount(1, $found);
+    }
+
+    public function test_models_can_be_found_with_script_fields(): void
+    {
+        factory(Book::class)
+            ->state('belongs_to_author')
+            ->create(['price' => 10]);
+
+        $found = Book::searchQuery()
+            ->scriptFields('final_price', [
+                'lang' => 'painless',
+                'source' => "doc['price'].value * params.factor",
+                'params' => [
+                    'factor' => 2,
+                ],
+            ])
+            ->execute();
+
+        $this->assertCount(1, $found);
+        $this->assertSame(20, $found->hits()->first()->raw()['fields']['final_price'][0]);
+    }
+
+    public function test_models_can_be_found_with_runtime_mappings_and_fields(): void
+    {
+        factory(Book::class)
+            ->state('belongs_to_author')
+            ->create(['price' => 10]);
+
+        $found = Book::searchQuery()
+            ->runtimeMappings('final_price', 'double', [
+                'lang' => 'painless',
+                'source' => 'emit(doc[params.field].value * params.multiplier)',
+                'params' => [
+                    'field' => 'price',
+                    'multiplier' => 2,
+                ],
+            ])
+            ->fields([
+                [
+                    'field' => 'final_price',
+                ],
+            ])
+            ->execute();
+
+        $this->assertCount(1, $found);
+        $this->assertSame(20.0, $found->hits()->first()->raw()['fields']['final_price'][0]);
     }
 }

@@ -10,6 +10,7 @@ use Elastic\ScoutDriverPlus\Factories\RoutingFactory;
 use Elastic\ScoutDriverPlus\Factories\RoutingFactoryInterface;
 use Elastic\ScoutDriverPlus\Jobs\RemoveFromSearch;
 use Illuminate\Support\ServiceProvider as AbstractServiceProvider;
+use Laravel\Scout\EngineManager;
 use Laravel\Scout\Jobs\RemoveFromSearch as DefaultRemoveFromSearch;
 use Laravel\Scout\Scout;
 
@@ -33,5 +34,7 @@ final class ServiceProvider extends AbstractServiceProvider
         ) {
             Scout::removeFromSearchUsing(RemoveFromSearch::class);
         }
+
+        resolve(EngineManager::class)->extend('null', static fn () => resolve(NullEngine::class));
     }
 }

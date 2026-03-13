@@ -3,23 +3,27 @@
 namespace Elastic\ScoutDriverPlus\Tests\Integration\Builders;
 
 use Elastic\Adapter\Search\SearchParameters;
+use Elastic\ScoutDriverPlus\Builders\DatabaseQueryBuilder;
 use Elastic\ScoutDriverPlus\Builders\SearchParametersBuilder;
+use Elastic\ScoutDriverPlus\Engine;
 use Elastic\ScoutDriverPlus\Exceptions\NotSearchableModelException;
+use Elastic\ScoutDriverPlus\Factories\ParameterFactory;
+use Elastic\ScoutDriverPlus\Searchable;
+use Elastic\ScoutDriverPlus\Support\Conditionable;
 use Elastic\ScoutDriverPlus\Tests\App\Author;
 use Elastic\ScoutDriverPlus\Tests\App\Book;
 use Elastic\ScoutDriverPlus\Tests\Integration\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\UsesClass;
 use stdClass;
 
-/**
- * @covers \Elastic\ScoutDriverPlus\Builders\SearchParametersBuilder
- * @covers \Elastic\ScoutDriverPlus\Exceptions\NotSearchableModelException
- * @covers \Elastic\ScoutDriverPlus\Support\Conditionable
- *
- * @uses   \Elastic\ScoutDriverPlus\Builders\DatabaseQueryBuilder
- * @uses   \Elastic\ScoutDriverPlus\Engine
- * @uses   \Elastic\ScoutDriverPlus\Factories\ParameterFactory
- * @uses   \Elastic\ScoutDriverPlus\Searchable
- */
+#[CoversClass(SearchParametersBuilder::class)]
+#[CoversClass(NotSearchableModelException::class)]
+#[CoversClass(Conditionable::class)]
+#[UsesClass(DatabaseQueryBuilder::class)]
+#[UsesClass(Engine::class)]
+#[UsesClass(ParameterFactory::class)]
+#[UsesClass(Searchable::class)]
 final class SearchParametersBuilderTest extends TestCase
 {
     public function test_search_parameters_with_query_can_be_built(): void
@@ -648,4 +652,139 @@ final class SearchParametersBuilderTest extends TestCase
 
         $this->assertEquals($expected, $actual);
     }
+
+    public function test_search_parameters_with_raw_script_fields_can_be_built(): void
+    {
+        $rawScriptFields = [
+            'final_price' => [
+                'script' => [
+                    'lang' => 'painless',
+                    'source' => "doc['price'].value * params.factor",
+                    'params' => [
+                        'factor' => 2,
+                    ],
+                ],
+            ],
+        ];
+
+        $expected = (new SearchParameters())
+            ->indices([(new Book())->searchableAs()])
+            ->scriptFields($rawScriptFields);
+
+        $actual = (new SearchParametersBuilder(new Book()))
+            ->scriptFieldsRaw($rawScriptFields)
+            ->buildSearchParameters();
+
+        $this->assertEquals($expected, $actual);
+    }
+
+    public function test_search_parameters_with_script_fields_can_be_built(): void
+    {
+        $expected = (new SearchParameters())
+            ->indices([(new Book())->searchableAs()])
+            ->scriptFields([
+                'final_price' => [
+                    'script' => [
+                        'lang' => 'painless',
+                        'source' => "doc['price'].value * params.factor",
+                        'params' => [
+                            'factor' => 2,
+                        ],
+                    ],
+                ],
+            ]);
+
+        $actual = (new SearchParametersBuilder(new Book()))
+            ->scriptFields('final_price', [
+                'lang' => 'painless',
+                'source' => "doc['price'].value * params.factor",
+                'params' => [
+                    'factor' => 2,
+                ],
+            ])
+            ->buildSearchParameters();
+
+        $this->assertEquals($expected, $actual);
+    }
+
+    public function test_search_parameters_with_raw_runtime_mappings_can_be_built(): void
+    {
+        $rawRuntimeMappings = [
+            'final_price' => [
+                'type' => 'double',
+                'script' => [
+                    'lang' => 'painless',
+                    'source' => 'doc[params.field] * params.multiplier',
+                    'params' => [
+                        'field' => 'my_field',
+                        'multiplier' => 2,
+                    ],
+                ],
+            ],
+        ];
+
+        $expected = (new SearchParameters())
+            ->indices([(new Book())->searchableAs()])
+            ->runtimeMappings($rawRuntimeMappings);
+
+        $actual = (new SearchParametersBuilder(new Book()))
+            ->runtimeMappingsRaw($rawRuntimeMappings)
+            ->buildSearchParameters();
+
+        $this->assertEquals($expected, $actual);
+    }
+
+    public function test_search_parameters_with_runtime_mappings_can_be_built(): void
+    {
+        $expected = (new SearchParameters())
+            ->indices([(new Book())->searchableAs()])
+            ->runtimeMappings([
+                'final_price' => [
+                    'type' => 'double',
+                    'script' => [
+                        'lang' => 'painless',
+                        'source' => 'doc[params.field] * params.multiplier',
+                        'params' => [
+                            'field' => 'my_field',
+                            'multiplier' => 2,
+                        ],
+                    ],
+                ],
+            ]);
+
+        $actual = (new SearchParametersBuilder(new Book()))
+            ->runtimeMappings('final_price', 'double', [
+                'lang' => 'painless',
+                'source' => 'doc[params.field] * params.multiplier',
+                'params' => [
+                    'field' => 'my_field',
+                    'multiplier' => 2,
+                ],
+            ])
+            ->buildSearchParameters();
+
+        $this->assertEquals($expected, $actual);
+    }
+
+    public function test_search_parameters_with_fields_can_be_built(): void
+    {
+        $expected = (new SearchParameters())
+            ->indices([(new Book())->searchableAs()])
+            ->fields([
+                [
+                    'field' => 'final_price',
+                ],
+            ]);
+
+        $actual = (new SearchParametersBuilder(new Book()))
+            ->fields([
+                [
+                    'field' => 'final_price',
+                ],
+            ])
+            ->buildSearchParameters();
+
+        $this->assertEquals($expected, $actual);
+    }
+
 }

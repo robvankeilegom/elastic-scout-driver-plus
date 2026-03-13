@@ -15,11 +15,13 @@ use Elastic\ScoutDriverPlus\Searchable;
 use Elastic\ScoutDriverPlus\Support\Arr;
 use Elastic\ScoutDriverPlus\Support\Conditionable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Traits\Macroable;
 use stdClass;
 
 class SearchParametersBuilder
 {
     use Conditionable;
+    use Macroable;
 
     public const DEFAULT_PAGE_SIZE = 10;
 
@@ -61,6 +63,9 @@ class SearchParametersBuilder
     private ?bool $explain;
     private ?int $terminateAfter;
     private ?bool $requestCache;
+    private array $scriptFields = [];
+    private array $runtimeMappings = [];
+    private array $fields = [];
 
     public function __construct(Model $model)
     {
@@ -196,7 +201,7 @@ class SearchParametersBuilder
         return $this;
     }
 
-    public function join(string $modelClass, float $boost = null): self
+    public function join(string $modelClass, ?float $boost = null): self
     {
         if (
             !is_a($modelClass, Model::class, true) ||
@@ -229,7 +234,7 @@ class SearchParametersBuilder
         return $this;
     }
 
-    public function load(array $relations, string $modelClass = null): self
+    public function load(array $relations, ?string $modelClass = null): self
     {
         $indexName = $this->resolveJoinedIndexName($modelClass);
         $this->databaseQueryBuilders[$indexName]->with($relations);
@@ -237,7 +242,7 @@ class SearchParametersBuilder
         return $this;
     }
 
-    public function refineModels(Closure $callback, string $modelClass = null): self
+    public function refineModels(Closure $callback, ?string $modelClass = null): self
     {
         $indexName = $this->resolveJoinedIndexName($modelClass);
         $this->databaseQueryBuilders[$indexName]->callback($callback);
@@ -316,6 +321,36 @@ class SearchParametersBuilder
     public function requestCache(bool $requestCache): self
     {
         $this->requestCache = $requestCache;
+        return $this;
+    }
+
+    public function scriptFieldsRaw(array $scriptFields): self
+    {
+        $this->scriptFields = $scriptFields;
+        return $this;
+    }
+
+    public function scriptFields(string $field, array $parameters): self
+    {
+        $this->scriptFields[$field] = ['script' => $parameters];
+        return $this;
+    }
+
+    public function runtimeMappingsRaw(array $parameters): self
+    {
+        $this->runtimeMappings = $parameters;
+        return $this;
+    }
+
+    public function runtimeMappings(string $field, string $type, array $script): self
+    {
+        $this->runtimeMappings[$field] = ['type' => $type, 'script' => $script];
+        return $this;
+    }
+
+    public function fields(array $fields): self
+    {
+        $this->fields = $fields;
         return $this;
     }
 
@@ -417,6 +452,18 @@ class SearchParametersBuilder
             $searchParameters->requestCache($this->requestCache);
         }
 
+        if (!empty($this->scriptFields)) {
+            $searchParameters->scriptFields($this->scriptFields);
+        }
+
+        if (!empty($this->runtimeMappings)) {
+            $searchParameters->runtimeMappings($this->runtimeMappings);
+        }
+
+        if (!empty($this->fields)) {
+            $searchParameters->fields($this->fields);
+        }
+
         return $searchParameters;
     }
 
@@ -430,7 +477,7 @@ class SearchParametersBuilder
     public function paginate(
         int $perPage = self::DEFAULT_PAGE_SIZE,
         string $pageName = 'page',
-        int $page = null
+        ?int $page = null
     ): Paginator {
         $page = $page ?? Paginator::resolveCurrentPage($pageName);
 

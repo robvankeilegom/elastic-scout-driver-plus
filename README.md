@@ -50,10 +50,12 @@ Elastic Scout Driver Plus supports:
 
 The current version of Elastic Scout Driver Plus has been tested with the following configuration:
 
-* PHP 7.4-8.x
-* Elasticsearch 8.x
-* Laravel 7.x-10.x
-* Laravel Scout 7.x-10.x
+* PHP 8.2
+* Elasticsearch 9.x
+* Laravel 12.x
+* Laravel Scout 10.x
+
+If your project uses older Elasticsearch, Laravel, or PHP version check [the previous major version](https://github.com/babenkoivan/elastic-scout-driver-plus/tree/v5.1.0#compatibility) of the package.
 
 ## Installation
 
@@ -112,6 +114,7 @@ Available methods are listed below:
 * [exists](docs/term-queries.md#exists)
 * [fuzzy](docs/term-queries.md#fuzzy)
 * [geoDistance](docs/geo-queries.md#geo-distance)
+* [geoShape](docs/geo-queries.md#geo-shape)
 * [ids](docs/term-queries.md#ids)
 * [matchAll](docs/full-text-queries.md#match-all)
 * [matchNone](docs/full-text-queries.md#match-none)
@@ -159,6 +162,9 @@ The builder supports various search parameters and provides a number of useful h
 * [refineModels](docs/available-methods.md#refinemodels)
 * [rescore](docs/available-methods.md#rescore)
 * [refineModels](docs/available-methods.md#refinemodels)
+* [scriptFields](docs/available-methods.md#scriptfields)
+* [runtimeMappings](docs/available-methods.md#runtimemappings)
+* [fields](docs/available-methods.md#fields)
 * [source](docs/available-methods.md#source)
 * [suggest](docs/available-methods.md#suggest)
 * [trackScores](docs/available-methods.md#trackscores)

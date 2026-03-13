@@ -4,13 +4,12 @@ namespace Elastic\ScoutDriverPlus\Tests\Unit\QueryParameters\Transformers;
 
 use Elastic\ScoutDriverPlus\QueryParameters\ParameterCollection;
 use Elastic\ScoutDriverPlus\QueryParameters\Transformers\FlatArrayTransformer;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
 
-/**
- * @covers \Elastic\ScoutDriverPlus\QueryParameters\Transformers\FlatArrayTransformer
- *
- * @uses   \Elastic\ScoutDriverPlus\QueryParameters\ParameterCollection
- */
+#[CoversClass(FlatArrayTransformer::class)]
+#[UsesClass(ParameterCollection::class)]
 final class FlatArrayTransformerTest extends TestCase
 {
     public function test_parameters_can_be_transformed_to_flat_array(): void
@@ -18,7 +17,7 @@ final class FlatArrayTransformerTest extends TestCase
         $parameters = new ParameterCollection([
             'fields' => ['title', 'year'],
             'query' => 2020,
-            'type' => '',
+            'type' => null,
         ]);
 
         $transformer = new FlatArrayTransformer();
